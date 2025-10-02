@@ -1,7 +1,10 @@
 from __future__ import annotations
 from abc import abstractmethod
+from logging import root
 import numpy as np
 from typing import TYPE_CHECKING
+
+from tree import Tree
 if TYPE_CHECKING:
     from heuristics import Heuristic
     from board import Board
@@ -79,28 +82,43 @@ class MinMaxPlayer(PlayerController):
             int: column to play in
         """
 
-        # TODO: implement minmax algortihm!
-        # HINT: use the functions on the 'board' object to produce a new board given a specific move
-        # HINT: use the functions on the 'heuristic' object to produce evaluations for the different board states!
-        
-        # Example:
-        max_value: float = -np.inf # negative infinity
-        max_move: int = 0
-        for col in range(board.width):
-            if board.is_valid(col):
-                new_board: Board = board.get_new_board(col, self.player_id)
-                value: int = self.heuristic.evaluate_board(self.player_id, new_board)
-                if value > max_value:
-                    max_move = col
+        root = Node(board, self.player_id)
+        Tree.expand_node(root, self.depth)
 
-        # This returns the same as
-        self.heuristic.get_best_action(self.player_id, board) # Very useful helper function!
+        def minimax_node(node, depth, maximizing_player):
+            winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
+            if depth == 0 or winner != 0:
+                return self.heuristic.evaluate_board(self.player_id, node.board)
 
-        # This is obviously not enough (this is depth 1)
-        # Your assignment is to create a data structure (tree) to store the gameboards such that you can evaluate a higher depths.
-        # Then, use the minmax algorithm to search through this tree to find the best move/action to take!
+            if maximizing_player:
+                max_eval = -np.inf
+                best_move = None
+                for child in node.children:
+                    eval = minimax_node(child, depth - 1, False)
+                    if eval > max_eval:
+                        max_eval = eval
+                        best_move = child
+                if depth == self.depth and best_move is not None:
+                    # Find which move (column) led to best_move
+                    for col in range(board.width):
+                        if board.is_valid(col):
+                            new_board = board.get_new_board(col, self.player_id)
+                            if np.array_equal(new_board.get_board_state(), best_move.board.get_board_state()):
+                                return col
+                    return 0  # fallback
+                return max_eval
+            else:
+                min_eval = np.inf
+                for child in node.children:
+                    eval = minimax_node(child, depth - 1, True)
+                    if eval < min_eval:
+                        min_eval = eval
+                return min_eval
 
-        return max_move
+        move = minimax_node(root, self.depth, True)
+        return move
+
+
     
 
 class AlphaBetaPlayer(PlayerController):
@@ -129,8 +147,46 @@ class AlphaBetaPlayer(PlayerController):
             int: column to play in
         """
 
-        # TODO: implement minmax algorithm with alpha beta pruning!
-        return 0
+        root = Node(board, self.player_id)
+        Tree.expand_node(root, self.depth)
+
+        def alphabeta_node(node, depth, alpha, beta, maximizing_player):
+            winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
+            if depth == 0 or winner != 0:
+                return self.heuristic.evaluate_board(self.player_id, node.board)
+
+            if maximizing_player:
+                max_eval = -np.inf
+                best_move = None
+                for child in node.children:
+                    eval = alphabeta_node(child, depth - 1, alpha, beta, False)
+                    if eval > max_eval:
+                        max_eval = eval
+                        best_move = child
+                    alpha = max(alpha, eval)
+                    if beta <= alpha:
+                        break
+                if depth == self.depth and best_move is not None:
+                    for col in range(board.width):
+                        if board.is_valid(col):
+                            new_board = board.get_new_board(col, self.player_id)
+                            if np.array_equal(new_board.get_board_state(), best_move.board.get_board_state()):
+                                return col
+                    return 0  # fallback
+                return max_eval
+            else:
+                min_eval = np.inf
+                for child in node.children:
+                    eval = alphabeta_node(child, depth - 1, alpha, beta, True)
+                    if eval < min_eval:
+                        min_eval = eval
+                    beta = min(beta, eval)
+                    if beta <= alpha:
+                        break
+                return min_eval
+
+        move = alphabeta_node(root, self.depth, -np.inf, np.inf, True)
+        return move
 
 
 class HumanPlayer(PlayerController):
