@@ -263,25 +263,22 @@ class AlphaBetaPlayer(PlayerController):
             if maximizing_player:
                 max_eval = -np.inf
                 best_move = None
-                for child in node.children:
+                for b, col in Tree.create_boards(node.board, node.player_id):
+                    child = Node(b, 3 - node.player_id, col)
                     eval = alphabeta_node(child, depth - 1, alpha, beta, False)
                     if eval > max_eval:
                         max_eval = eval
-                        best_move = child
+                        best_move = col
                     alpha = max(alpha, eval)
                     if beta <= alpha:
                         break
                 if depth == self.depth and best_move is not None:
-                    for col in range(board.width):
-                        if board.is_valid(col):
-                            new_board = board.get_new_board(col, self.player_id)
-                            if np.array_equal(new_board.get_board_state(), best_move.board.get_board_state()):
-                                return col
-                    return 0  # fallback
+                    return best_move
                 return max_eval
             else:
                 min_eval = np.inf
-                for child in node.children:
+                for b, col in Tree.create_boards(node.board, node.player_id):
+                    child = Node(b, 3 - node.player_id, col)
                     eval = alphabeta_node(child, depth - 1, alpha, beta, True)
                     if eval < min_eval:
                         min_eval = eval
@@ -290,6 +287,8 @@ class AlphaBetaPlayer(PlayerController):
                         break
                 return min_eval
 
+
+        root = Node(board, self.player_id)
         move = alphabeta_node(root, self.depth, -np.inf, np.inf, True)
         return move
 

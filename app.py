@@ -142,13 +142,13 @@ def get_players(game_n: int) -> List[PlayerController]:
     heuristic2: Heuristic = SimpleHeuristic(game_n)
 
     # Uncomment and adjust the lines below to select AI players:
-    # human1: PlayerController = HumanPlayer(1, game_n, heuristic1)
-    # human2: PlayerController = HumanPlayer(2, game_n, heuristic2)
+    human1: PlayerController = HumanPlayer(1, game_n, heuristic1)
+    human2: PlayerController = HumanPlayer(2, game_n, heuristic2)
 
     minmax1: PlayerController = MinMaxPlayer(1, game_n, depth=3, heuristic=heuristic1)
     alphabeta2: PlayerController = AlphaBetaPlayer(2, game_n, depth=3, heuristic=heuristic2)
 
-    players: List[PlayerController] = [minmax1, alphabeta2]
+    players: List[PlayerController] = [human1, alphabeta2]
 
     assert players[0].player_id in {1, 2}, 'The player_id of the first player must be either 1 or 2'
     assert players[1].player_id in {1, 2}, 'The player_id of the second player must be either 1 or 2'
@@ -172,6 +172,4 @@ if __name__ == '__main__':
     Tree.expand_node(root, 2)
     tree = Tree(root)
     print(tree)
-
-
-    # start_game(game_n, board, get_players(game_n))
+    start_game(game_n, board, get_players(game_n))
