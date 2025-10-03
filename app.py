@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 from numba import jit
 
-from tree import Node, Tree
+from players import Node, Tree
 
 
 def start_game(game_n: int, board: Board, players: List[PlayerController]) -> int:
@@ -174,4 +174,4 @@ if __name__ == '__main__':
     print(tree)
 
 
-    start_game(game_n, board, get_players(game_n))
+    # start_game(game_n, board, get_players(game_n))

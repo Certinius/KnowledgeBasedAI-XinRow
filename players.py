@@ -4,10 +4,118 @@ from logging import root
 import numpy as np
 from typing import TYPE_CHECKING
 
-from tree import Tree
 if TYPE_CHECKING:
     from heuristics import Heuristic
     from board import Board
+
+from typing import List, Optional
+
+
+# Game tree section begin
+
+class Node:
+    def __init__(self, board: Board, player_id: int, previous_move: int = -1, children: Optional[ List[Node]] = None) -> None:
+        """player_id here is the id of the player whose turn it (technically) is;
+        previous_move's default value is -1, in the case that it is irrelevant (e.g. at root)
+        """
+        self._board:            Board   = board
+        self._player_id:        int     = player_id
+        self._previous_move:    int     = previous_move
+
+        self._children:     List[Node]  = children or []
+
+    @property
+    def board(self) -> Board:
+        return self._board
+
+    @property
+    def player_id(self) -> int:
+        return self._player_id
+
+    @property
+    def previous_move(self) -> int:
+        return self._previous_move
+
+    @property
+    def children(self) -> List[Node]:
+        return self._children
+
+    @children.setter
+    def children(self, children: List[Node]) -> None:
+        self._children = children
+
+    def __str__(self) -> str:
+        output = ""
+
+        output += f"player {self.player_id}'s turn from state:\n"
+        output += self.board.__str__()
+        output += f"{len(self.children)} possible moves:\n"
+
+        for child in self.children:
+            output += child.__str__()
+
+        return output
+
+
+class Tree:
+    minimax_depth: int
+
+    def __init__(self, root: Node) -> None:
+        self.root = root
+
+    def create_tree(self, depth: int) -> None:
+        assert self.root is not None, "no Tree root"
+
+        self.expand_node(self.root, depth)
+
+        self.minimax_depth = depth
+
+    @staticmethod
+    def expand_node(node: Node, depth: int) -> None:
+        if depth == 0:
+            return
+
+        children: List[Node] = []
+
+        boards = Tree.create_boards(node.board, node.player_id)
+        for b in boards:
+            child = Node(b[0], 3 - node.player_id, b[1])
+            Tree.expand_node(child, depth - 1)
+
+            children.append(child)
+
+        node.children = children
+
+    @staticmethod
+    def create_boards(starting_board: Board, player_id: int) -> List[(Board,int)]:
+        """Returns all resulting boards after
+        every possible turn has been made from
+        a board (state) starting_board by
+        player with id = player_id
+        """
+
+        res: List[(Board,int)] = []
+
+        for i in range(starting_board.width):
+            if starting_board.is_valid(i):
+                from board import Board
+                temp = Board(starting_board)
+                if temp.play(i, player_id):
+                    res.append( (temp, i) )
+
+        return res
+
+    def __str__(self) -> str:
+        """
+        Returns:
+            str: a human-readable representation of the tree
+        """
+
+        assert self.root is not None, "no Tree root"
+
+        return self.root.__str__()
+
+# Game tree section end
 
 
 class PlayerController:
@@ -72,6 +180,35 @@ class MinMaxPlayer(PlayerController):
         self.depth: int = depth
 
 
+    def minimax_node(self, node, depth, maximizing_player):
+        winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
+        if depth == 0 or winner != 0:
+            return self.heuristic.evaluate_board(self.player_id, node.board)
+
+        if maximizing_player:
+            max_eval = -np.inf
+            best_move = None
+
+            for child in node.children:
+                eval = self.minimax_node(child, depth - 1, False)
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = child.previous_move
+
+            return best_move
+        else: # min
+            min_eval = np.inf
+            best_move = None
+
+            for child in node.children:
+                eval = self.minimax_node(child, depth - 1, True)
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = child.previous_move
+
+            return min_eval
+
+
     def make_move(self, board: Board) -> int:
         """Gets the column for the player to play in
 
@@ -85,41 +222,9 @@ class MinMaxPlayer(PlayerController):
         root = Node(board, self.player_id)
         Tree.expand_node(root, self.depth)
 
-        def minimax_node(node, depth, maximizing_player):
-            winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
-            if depth == 0 or winner != 0:
-                return self.heuristic.evaluate_board(self.player_id, node.board)
-
-            if maximizing_player:
-                max_eval = -np.inf
-                best_move = None
-                for child in node.children:
-                    eval = minimax_node(child, depth - 1, False)
-                    if eval > max_eval:
-                        max_eval = eval
-                        best_move = child
-                if depth == self.depth and best_move is not None:
-                    # Find which move (column) led to best_move
-                    for col in range(board.width):
-                        if board.is_valid(col):
-                            new_board = board.get_new_board(col, self.player_id)
-                            if np.array_equal(new_board.get_board_state(), best_move.board.get_board_state()):
-                                return col
-                    return 0  # fallback
-                return max_eval
-            else:
-                min_eval = np.inf
-                for child in node.children:
-                    eval = minimax_node(child, depth - 1, True)
-                    if eval < min_eval:
-                        min_eval = eval
-                return min_eval
-
-        move = minimax_node(root, self.depth, True)
+        move = self.minimax_node(root, self.depth, True)
         return move
 
-
-    
 
 class AlphaBetaPlayer(PlayerController):
     """Class for the minmax player using the minmax algorithm with alpha-beta pruning
