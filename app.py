@@ -7,6 +7,14 @@ from numba import jit
 
 from players import Node, Tree
 
+"""
+Authors:
+
+Daan van de Wiel s1105833
+Valerijs Barmins s1129727
+
+"""
+
 
 def start_game(game_n: int, board: Board, players: List[PlayerController]) -> int:
     """Starting a game and handling the game logic
@@ -20,7 +28,7 @@ def start_game(game_n: int, board: Board, players: List[PlayerController]) -> in
         int: id of the winning player, or -1 if the game ends in a draw
     """
     print('Start game!')
-    current_player_index: int = 0 # index of the current player in the players list
+    current_player_index: int = 0  # index of the current player in the players list
     winner: int = 0
 
     # Main game loop
@@ -74,9 +82,9 @@ def winning(state: np.ndarray, game_n: int) -> int:
                 if counter >= game_n:
                     return player
             else:
-                counter = 1 
+                counter = 1
                 player = field
-            
+
     # Horizintal check
     for row in state.T:
         counter = 0
@@ -105,7 +113,7 @@ def winning(state: np.ndarray, game_n: int) -> int:
                     break
             if player != -1:
                 return player
-            
+
     # Descending diagonal check
     for i, col in enumerate(state[game_n - 1:]):
         for j, field in enumerate(col[game_n - 1:]):
@@ -118,13 +126,13 @@ def winning(state: np.ndarray, game_n: int) -> int:
                     break
             if player != -1:
                 return player
-        
+
     # Check for a draw
     if np.all(state[:, 0]):
-        return -1 # The board is full, game is a draw
+        return -1  # The board is full, game is a draw
 
-    return 0 # Game is not over 
-    
+    return 0  # Game is not over
+
 
 def get_players(game_n: int) -> List[PlayerController]:
     """Gets the two players
@@ -143,12 +151,12 @@ def get_players(game_n: int) -> List[PlayerController]:
 
     # Uncomment and adjust the lines below to select AI players:
     human1: PlayerController = HumanPlayer(1, game_n, heuristic1)
-    human2: PlayerController = HumanPlayer(2, game_n, heuristic2)
+    # human2: PlayerController = HumanPlayer(2, game_n, heuristic2)
 
-    minmax1: PlayerController = MinMaxPlayer(1, game_n, depth=3, heuristic=heuristic1)
-    alphabeta2: PlayerController = AlphaBetaPlayer(2, game_n, depth=3, heuristic=heuristic2)
+    minmax1: PlayerController = MinMaxPlayer(2, game_n, depth=6, heuristic=heuristic2)
+    alphabeta1: PlayerController = AlphaBetaPlayer(2, game_n, depth=5, heuristic=heuristic2)
 
-    players: List[PlayerController] = [human1, alphabeta2]
+    players: List[PlayerController] = [human1, alphabeta1]
 
     assert players[0].player_id in {1, 2}, 'The player_id of the first player must be either 1 or 2'
     assert players[1].player_id in {1, 2}, 'The player_id of the second player must be either 1 or 2'
@@ -158,18 +166,22 @@ def get_players(game_n: int) -> List[PlayerController]:
 
     return players
 
+
 if __name__ == '__main__':
-    game_n: int = 4 # n in a row required to win
-    width: int = 7  # width of the board
-    height: int = 6 # height of the board
+    game_n: int = 5  # n in a row required to win
+    width: int = 9  # width of the board
+    height: int = 9  # height of the board
 
     # Check whether the game_n is possible
     assert 1 < game_n <= min(width, height), 'game_n is not possible'
 
     board: Board = Board(width, height)
 
+    """
     root = Node(board, 1)
     Tree.expand_node(root, 2)
     tree = Tree(root)
     print(tree)
+    """
+
     start_game(game_n, board, get_players(game_n))

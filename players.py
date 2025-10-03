@@ -10,19 +10,27 @@ if TYPE_CHECKING:
 
 from typing import List, Optional
 
+"""
+Authors:
+
+Daan van de Wiel s1105833
+Valerijs Barmins s1129727
+
+"""
 
 # Game tree section begin
 
 class Node:
-    def __init__(self, board: Board, player_id: int, previous_move: int = -1, children: Optional[ List[Node]] = None) -> None:
+    def __init__(self, board: Board, player_id: int, previous_move: int = -1,
+                 children: Optional[List[Node]] = None) -> None:
         """player_id here is the id of the player whose turn it (technically) is;
         previous_move's default value is -1, in the case that it is irrelevant (e.g. at root)
         """
-        self._board:            Board   = board
-        self._player_id:        int     = player_id
-        self._previous_move:    int     = previous_move
+        self._board: Board = board
+        self._player_id: int = player_id
+        self._previous_move: int = previous_move
 
-        self._children:     List[Node]  = children or []
+        self._children: List[Node] = children or []
 
     @property
     def board(self) -> Board:
@@ -87,21 +95,21 @@ class Tree:
         node.children = children
 
     @staticmethod
-    def create_boards(starting_board: Board, player_id: int) -> List[(Board,int)]:
+    def create_boards(starting_board: Board, player_id: int) -> List[(Board, int)]:
         """Returns all resulting boards after
         every possible turn has been made from
         a board (state) starting_board by
         player with id = player_id
         """
 
-        res: List[(Board,int)] = []
+        res: List[(Board, int)] = []
 
         for i in range(starting_board.width):
             if starting_board.is_valid(i):
                 from board import Board
                 temp = Board(starting_board)
                 if temp.play(i, player_id):
-                    res.append( (temp, i) )
+                    res.append((temp, i))
 
         return res
 
@@ -115,12 +123,14 @@ class Tree:
 
         return self.root.__str__()
 
+
 # Game tree section end
 
 
 class PlayerController:
     """Abstract class defining a player
     """
+
     def __init__(self, player_id: int, game_n: int, heuristic: Heuristic) -> None:
         """
         Args:
@@ -132,14 +142,12 @@ class PlayerController:
         self.game_n = game_n
         self.heuristic = heuristic
 
-
     def get_eval_count(self) -> int:
         """
         Returns:
             int: The amount of times the heuristic was used to evaluate a board state
         """
         return self.heuristic.eval_count
-    
 
     def __str__(self) -> str:
         """
@@ -149,7 +157,6 @@ class PlayerController:
         if self.player_id == 1:
             return 'X'
         return 'O'
-        
 
     @abstractmethod
     def make_move(self, board: Board) -> int:
@@ -168,6 +175,7 @@ class MinMaxPlayer(PlayerController):
     """Class for the minmax player using the minmax algorithm
     Inherits from Playercontroller
     """
+
     def __init__(self, player_id: int, game_n: int, depth: int, heuristic: Heuristic) -> None:
         """
         Args:
@@ -178,7 +186,6 @@ class MinMaxPlayer(PlayerController):
         """
         super().__init__(player_id, game_n, heuristic)
         self.depth: int = depth
-
 
     def minimax_node(self, node, depth, maximizing_player):
         winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
@@ -195,8 +202,11 @@ class MinMaxPlayer(PlayerController):
                     max_eval = eval
                     best_move = child.previous_move
 
-            return best_move
-        else: # min
+            if best_move is not None and depth == self.depth:
+                return best_move
+
+            return max_eval
+        else:  # min
             min_eval = np.inf
             best_move = None
 
@@ -207,7 +217,6 @@ class MinMaxPlayer(PlayerController):
                     best_move = child.previous_move
 
             return min_eval
-
 
     def make_move(self, board: Board) -> int:
         """Gets the column for the player to play in
@@ -230,6 +239,7 @@ class AlphaBetaPlayer(PlayerController):
     """Class for the minmax player using the minmax algorithm with alpha-beta pruning
     Inherits from Playercontroller
     """
+
     def __init__(self, player_id: int, game_n: int, depth: int, heuristic: Heuristic) -> None:
         """
         Args:
@@ -240,7 +250,6 @@ class AlphaBetaPlayer(PlayerController):
         """
         super().__init__(player_id, game_n, heuristic)
         self.depth: int = depth
-
 
     def make_move(self, board: Board) -> int:
         """Gets the column for the player to play in
@@ -253,7 +262,6 @@ class AlphaBetaPlayer(PlayerController):
         """
 
         root = Node(board, self.player_id)
-        Tree.expand_node(root, self.depth)
 
         def alphabeta_node(node, depth, alpha, beta, maximizing_player):
             winner = self.heuristic.winning(node.board.get_board_state(), self.game_n)
@@ -287,8 +295,6 @@ class AlphaBetaPlayer(PlayerController):
                         break
                 return min_eval
 
-
-        root = Node(board, self.player_id)
         move = alphabeta_node(root, self.depth, -np.inf, np.inf, True)
         return move
 
@@ -297,6 +303,7 @@ class HumanPlayer(PlayerController):
     """Class for the human player
     Inherits from Playercontroller
     """
+
     def __init__(self, player_id: int, game_n: int, heuristic: Heuristic) -> None:
         """
         Args:
@@ -306,7 +313,6 @@ class HumanPlayer(PlayerController):
         """
         super().__init__(player_id, game_n, heuristic)
 
-    
     def make_move(self, board: Board) -> int:
         """Gets the column for the player to play in
 
@@ -326,7 +332,6 @@ class HumanPlayer(PlayerController):
 
         print(f'Selected column: {col}')
         return col - 1
-    
 
     def ask_input(self, board: Board) -> int:
         """Gets the input from the user
@@ -342,9 +347,9 @@ class HumanPlayer(PlayerController):
             assert 0 < col <= board.width
             assert board.is_valid(col - 1)
             return col
-        except ValueError: # If the input can't be converted to an integer
+        except ValueError:  # If the input can't be converted to an integer
             print('Please enter a number that corresponds to a column.', end='\n\n')
             return self.ask_input(board)
-        except AssertionError: # If the input matches a full or non-existing column
+        except AssertionError:  # If the input matches a full or non-existing column
             print('Please enter a valid column.\nThis column is either full or doesn\'t exist!', end='\n\n')
             return self.ask_input(board)
